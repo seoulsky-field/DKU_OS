@@ -19,16 +19,21 @@ class SPN : public Scheduler{
             std::queue<Job> tmp;
 
             int index = 0;
-            int min_time = 999999;
+            int min_time = 99999;
             Job shortest_job;
 
-            for (auto it = copy_job.front(); !copy_job.empty(); copy_job.pop(), ++index) {
-                if (it.service_time < min_time) {
-                    min_time = it.service_time;
-                    shortest_job = it;
+            // Find the shortest service_time Job
+            while (!copy_job.empty()){
+                Job job_value = copy_job.front();
+                copy_job.pop();
+
+                if (job_value.service_time < min_time && job_value.arrival_time <= current_time_) {
+                    min_time = job_value.service_time;
+                    shortest_job = job_value;
                 }
             }
 
+            // Remove the shortest service time Job in the job_queue_
             while (!job_queue_.empty()) {
                 if (job_queue_.front().name != shortest_job.name) {
                     tmp.push(job_queue_.front());
@@ -49,7 +54,6 @@ class SPN : public Scheduler{
         int run() override {
             if (current_job_.name == 0 && !job_queue_.empty()) {
                 current_job_ = search_shortest_job();
-                // remove_current_job(current_job_);
             }
 
             if (current_job_.remain_time == 0) {
@@ -59,7 +63,6 @@ class SPN : public Scheduler{
                 if (job_queue_.empty()) return -1;
 
                 current_job_ = search_shortest_job();
-                // remove_current_job(current_job_);
 
                 current_time_ += switch_time_;
             }
