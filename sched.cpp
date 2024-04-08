@@ -112,39 +112,47 @@ class RR : public Scheduler{
 class SRT : public Scheduler{
     private:
         void move_job_to_front() {
-            std::queue<Job> tmp = job_queue_;
+            std::queue<Job> tmp;
             int min_time = 99999;
             int min_job_name = 99999;
             Job shortest_job;
 
+            if (job_queue_.size() == 1) {
+                return;
+            }
+
+            if (current_job_.remain_time != 0) {
+                shortest_job = current_job_;
+                min_time = current_job_.remain_time;
+                min_job_name = current_job_.name;
+            }
+
             // Find the shortest remain_time Job
-            if (job_queue_.size() != 1) {
-                while (!job_queue_.empty()){
-                    Job job_value = job_queue_.front();
-                    job_queue_.pop();
-                    tmp.push(job_value);
+            while (!job_queue_.empty()){
+                Job job_value = job_queue_.front();
+                job_queue_.pop();
+                tmp.push(job_value);
 
-                    if (job_value.remain_time <= min_time && job_value.arrival_time <= current_time_) {
-                        if (job_value.remain_time == min_time) {
-                            if (job_value.name > min_job_name) {
-                                continue;
-                            }
+                if (job_value.remain_time <= min_time && job_value.arrival_time <= current_time_) {
+                    if (job_value.remain_time == min_time) {
+                        if (job_value.name > min_job_name) {
+                            continue;
                         }
-                        shortest_job = job_value;
-                        min_time = job_value.remain_time;
-                        min_job_name = job_value.name;
                     }
+                    shortest_job = job_value;
+                    min_time = job_value.remain_time;
+                    min_job_name = job_value.name;
                 }
+            }
 
-                job_queue_.push(shortest_job);
+            job_queue_.push(shortest_job);
 
-                while (!tmp.empty()){
-                    Job job_value = tmp.front();
-                    tmp.pop();
+            while (!tmp.empty()){
+                Job job_value = tmp.front();
+                tmp.pop();
 
-                    if (job_value.name != shortest_job.name) {
-                        job_queue_.push(job_value);
-                    }
+                if (job_value.name != shortest_job.name) {
+                    job_queue_.push(job_value);
                 }
             }
         }
@@ -189,13 +197,6 @@ class SRT : public Scheduler{
 
             current_time_++;
             current_job_.remain_time--;
-
-            using namespace std::this_thread;
-            using namespace std::chrono;
-
-            std::cout << current_job_.name << "\n";
-
-            sleep_for(seconds(1));
 
             return current_job_.name;
         }

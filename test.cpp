@@ -21,9 +21,9 @@ TEST_P(SchedulerTest, SPN) {
 //   sched_ = new RR(job_queue_, switch_time_, /*time slice*/ 4);
 // }
 
-// TEST_P(SchedulerTest, SRT) {
-//   sched_ = new SRT(job_queue_, switch_time_);
-// }
+TEST_P(SchedulerTest, SRT) {
+  sched_ = new SRT(job_queue_, switch_time_);
+}
 
 // TEST_P(SchedulerTest, HRRN) {
 //   sched_ = new HRRN(job_queue_, switch_time_);
