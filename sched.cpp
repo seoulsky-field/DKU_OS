@@ -111,41 +111,42 @@ class RR : public Scheduler{
 
 class SRT : public Scheduler{
     private:
-        // Job search_SRT_job() {
-        //     int min_time = 99999;
-        //     Job shortest_job;
+        void move_job_to_front() {
+            std::queue<Job> tmp = job_queue_;
+            int min_time = 99999;
+            int min_job_name = 99999;
+            Job shortest_job;
 
-        //     std::size_t size = job_queue_.size();
+            // Find the shortest remain_time Job
+            if (job_queue_.size() != 1) {
+                while (!job_queue_.empty()){
+                    Job job_value = job_queue_.front();
+                    job_queue_.pop();
+                    tmp.push(job_value);
 
-        //     // Find the shortest remain_time Job
-        //     while (size-- > 0){
-        //         Job job_value = job_queue_.front();
-        //         job_queue_.pop();
-        //         job_queue_.push(job_value);
-
-        //         if (job_value.remain_time < min_time && job_value.arrival_time <= current_time_) {
-        //             min_time = job_value.remain_time;
-        //             shortest_job = job_value;
-        //         }
-        //     }
-
-        //     job_queue_ = tmp;
-
-        //     return shortest_job;
-        // }
-
-        void remove_done_job(const Job& current_job) {
-            std::queue<Job> tmp;
-
-            // Remove the remain_time == 0 Job in the job_queue_
-            while (!job_queue_.empty()) {
-                if (job_queue_.front().name != current_job.name) {
-                    tmp.push(job_queue_.front());
+                    if (job_value.remain_time <= min_time && job_value.arrival_time <= current_time_) {
+                        if (job_value.remain_time == min_time) {
+                            if (job_value.name > min_job_name) {
+                                continue;
+                            }
+                        }
+                        shortest_job = job_value;
+                        min_time = job_value.remain_time;
+                        min_job_name = job_value.name;
+                    }
                 }
-                job_queue_.pop();
-            }
 
-            job_queue_ = tmp;
+                job_queue_.push(shortest_job);
+
+                while (!tmp.empty()){
+                    Job job_value = tmp.front();
+                    tmp.pop();
+
+                    if (job_value.name != shortest_job.name) {
+                        job_queue_.push(job_value);
+                    }
+                }
+            }
         }
 
     public:
@@ -155,37 +156,32 @@ class SRT : public Scheduler{
 
         int run() override {
             if (current_job_.name == 0 && !job_queue_.empty()) {
+                move_job_to_front();
                 current_job_ = job_queue_.front();
-            }
-
-            int prev_job_name = current_job_.name;
-
-            if (current_job_.remain_time == 0) {
-                current_job_.completion_time = current_time_;
-                end_jobs_.push_back(current_job_);
-                remove_done_job(current_job_);
-
-                if (job_queue_.empty()) return -1;
-
-                // current_job_ = search_SRT_job();
-                // current_time_ += switch_time_;
-            }
-            int min_time = 99999;
-            std::size_t size = job_queue_.size();
-
-            while (size-- > 0){
-                Job job_value = job_queue_.front();
-
-                if (job_value.remain_time < min_time && job_value.arrival_time <= current_time_) {
-                    min_time = job_value.remain_time;
-                    current_job_ = job_value;
-                }
-
                 job_queue_.pop();
-                job_queue_.push(job_value);
-            }
+            }else {
+                if (current_job_.remain_time == 0) {
+                    current_job_.completion_time = current_time_;
+                    end_jobs_.push_back(current_job_);
 
-            if (prev_job_name != current_job_.name) current_time_ += switch_time_;
+                    if (job_queue_.empty()) return -1;
+
+                    move_job_to_front();
+                    current_job_ = job_queue_.front();
+                    job_queue_.pop();
+
+                    current_time_ += switch_time_;
+                }else {
+                    int prev_job_name = current_job_.name;
+                    job_queue_.push(current_job_);
+
+                    move_job_to_front();
+                    current_job_ = job_queue_.front();
+                    job_queue_.pop();
+
+                    if (prev_job_name != current_job_.name) current_time_ += switch_time_;
+                }
+            }
 
             if (current_job_.service_time == current_job_.remain_time) {
                 current_job_.first_run_time = current_time_;
@@ -193,6 +189,13 @@ class SRT : public Scheduler{
 
             current_time_++;
             current_job_.remain_time--;
+
+            using namespace std::this_thread;
+            using namespace std::chrono;
+
+            std::cout << current_job_.name << "\n";
+
+            sleep_for(seconds(1));
 
             return current_job_.name;
         }
