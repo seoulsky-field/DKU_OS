@@ -86,9 +86,7 @@ class RR : public Scheduler{
         int time_slice_;
         int left_slice_;
         std::queue<Job> waiting_queue;
-        /*
-        * 구현 (멤버 변수/함수 추가 및 삭제 가능)
-        */
+
     public:
         RR(std::queue<Job> jobs, double switch_overhead, int time_slice) : Scheduler(jobs, switch_overhead) {
             name = "RR_"+std::to_string(time_slice);
@@ -101,10 +99,55 @@ class RR : public Scheduler{
         }
 
         int run() override {
-            /*
-            * 구현 (아래 코드도 수정 및 삭제 가능)
-            */
-            return -1;
+            if (current_job_.name == 0 && !job_queue_.empty()) {
+                current_job_ = job_queue_.front();
+                job_queue_.pop();
+            }else {
+                if (current_job_.remain_time == 0) {
+                    current_job_.completion_time = current_time_;
+                    end_jobs_.push_back(current_job_);
+
+                    if (job_queue_.empty() && waiting_queue.empty()) return -1;
+
+                    current_job_ = waiting_queue.front();
+                    waiting_queue.pop();
+
+                    current_time_ += switch_time_;
+                    this->left_slice_ = this->time_slice_;
+                }else if (left_slice_ == 0) {
+                    waiting_queue.push(current_job_);
+                    int prev_job_name = current_job_.name;
+
+                    current_job_ = waiting_queue.front();
+                    waiting_queue.pop();
+
+                    if (prev_job_name != current_job_.name) current_time_ += switch_time_;
+
+                    this->left_slice_ = this->time_slice_;
+                }
+            }
+
+            // 현재 작업이 처음 스케줄링 되는 것이라면
+            if (current_job_.service_time == current_job_.remain_time){
+                // 첫 실행 시간 기록
+                current_job_.first_run_time = current_time_;
+            }
+
+            // 현재 시간 ++
+            current_time_++;
+            // 작업의 남은 시간 --
+            current_job_.remain_time--;
+            
+            this->left_slice_--;
+
+            while (!job_queue_.empty() && job_queue_.front().arrival_time <= current_time_) {
+                Job add_job = job_queue_.front();
+                waiting_queue.push(add_job);
+                job_queue_.pop();
+            }
+
+            // 스케줄링할 작업명 반환
+            return current_job_.name;
         }
                 
 };

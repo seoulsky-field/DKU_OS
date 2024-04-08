@@ -4,22 +4,22 @@
 
 // 각 TEST_P는 SchedulerTest::SetUp() 이후 실행됨
 // 각 TEST_P 실행 이후, SchedulerTest::TearDow()이 실행됨
-// TEST_P(SchedulerTest, FCFS) {
-//   // 부모 Scheduler 클래스 포인터로 자식 FCFS 클래스를 가리킴
-//   sched_ = new FCFS(job_queue_, switch_time_);
-// }
+TEST_P(SchedulerTest, FCFS) {
+  // 부모 Scheduler 클래스 포인터로 자식 FCFS 클래스를 가리킴
+  sched_ = new FCFS(job_queue_, switch_time_);
+}
 
 TEST_P(SchedulerTest, SPN) {
   sched_ = new SPN(job_queue_, switch_time_);
 }
 
-// TEST_P(SchedulerTest, RR_1) {
-//   sched_ = new RR(job_queue_, switch_time_, /*time slice*/ 1);
-// }
+TEST_P(SchedulerTest, RR_1) {
+  sched_ = new RR(job_queue_, switch_time_, /*time slice*/ 1);
+}
 
-// TEST_P(SchedulerTest, RR_4) {
-//   sched_ = new RR(job_queue_, switch_time_, /*time slice*/ 4);
-// }
+TEST_P(SchedulerTest, RR_4) {
+  sched_ = new RR(job_queue_, switch_time_, /*time slice*/ 4);
+}
 
 TEST_P(SchedulerTest, SRT) {
   sched_ = new SRT(job_queue_, switch_time_);
