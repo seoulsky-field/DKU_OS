@@ -25,9 +25,9 @@ TEST_P(SchedulerTest, SRT) {
   sched_ = new SRT(job_queue_, switch_time_);
 }
 
-// TEST_P(SchedulerTest, HRRN) {
-//   sched_ = new HRRN(job_queue_, switch_time_);
-// }
+TEST_P(SchedulerTest, HRRN) {
+  sched_ = new HRRN(job_queue_, switch_time_);
+}
 
 // TEST_P(SchedulerTest, FeedBack_1) {
 //   sched_ = new FeedBack(job_queue_, switch_time_, /*is_2i*/ false);

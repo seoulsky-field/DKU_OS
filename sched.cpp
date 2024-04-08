@@ -137,7 +137,7 @@ class RR : public Scheduler{
             current_time_++;
             // 작업의 남은 시간 --
             current_job_.remain_time--;
-            
+
             this->left_slice_--;
 
             while (!job_queue_.empty() && job_queue_.front().arrival_time <= current_time_) {
@@ -247,23 +247,70 @@ class SRT : public Scheduler{
 
 class HRRN : public Scheduler{
     private:
-        /*
-        * 구현 (멤버 변수/함수 추가 및 삭제 가능)
-        */    
+        Job search_high_response_ratio_job() {
+            std::queue<Job> copy_job = job_queue_;
+            std::queue<Job> tmp;
+
+            double high_response_ratio = 0;
+            Job high_job;
+
+            // Find the shortest service_time Job
+            while (!copy_job.empty()){
+                Job job_value = copy_job.front();
+                copy_job.pop();
+
+                if (job_value.arrival_time <= current_time_) {
+                    double job_response_ratio = 1 + double(current_time_ - job_value.arrival_time) / job_value.service_time;
+                    
+                    if (job_response_ratio > high_response_ratio) {
+                        high_response_ratio = job_response_ratio;
+                        high_job = job_value;
+                    }
+                }
+            }
+
+            // Remove the shortest service time Job in the job_queue_
+            while (!job_queue_.empty()) {
+                if (job_queue_.front().name != high_job.name) {
+                    tmp.push(job_queue_.front());
+                }
+                job_queue_.pop();
+            }
+
+            job_queue_ = tmp;
+
+            return high_job;
+        }
     public:
         HRRN(std::queue<Job> jobs, double switch_overhead) : Scheduler(jobs, switch_overhead) {
             name = "HRRN";
-            /*
-            * 위 생성자 선언 및 이름 초기화 코드 수정하지 말것.
-            * 나머지는 자유롭게 수정 및 작성 가능
-            */            
         }
 
         int run() override {
-            /*
-            구현 
-            */
-            return -1;
+            if (current_job_.name == 0 && !job_queue_.empty()) {
+                current_job_ = search_high_response_ratio_job();
+            }
+
+            if (current_job_.remain_time == 0) {
+                current_job_.completion_time = current_time_;
+                end_jobs_.push_back(current_job_);
+
+                if (job_queue_.empty()) return -1;
+
+                current_job_ = search_high_response_ratio_job();
+
+                current_time_ += switch_time_;
+            }
+
+            if (current_job_.service_time == current_job_.remain_time) {
+                current_job_.first_run_time = current_time_;
+            }
+
+            current_time_++;
+
+            current_job_.remain_time--;
+
+            return current_job_.name;
         }
 };
 
