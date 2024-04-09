@@ -12,11 +12,22 @@
 #include <algorithm>
 #include "sched.h"
 
+/*
+ * Simple error debuging code
+
 #include <chrono>
 #include <thread>
 
+using namespace std::this_thread;
+using namespace std::chrono;
+
+sleep_for(seconds(1));
+
+ */
+
 class SPN : public Scheduler{
     private:
+        // SPN policy main algorithm
         Job search_shortest_job() {
             std::queue<Job> copy_job = job_queue_;
             std::queue<Job> tmp;
@@ -29,6 +40,7 @@ class SPN : public Scheduler{
                 Job job_value = copy_job.front();
                 copy_job.pop();
 
+                // Search & Update algorithm
                 if (job_value.service_time < min_time && job_value.arrival_time <= current_time_) {
                     min_time = job_value.service_time;
                     shortest_job = job_value;
@@ -49,34 +61,50 @@ class SPN : public Scheduler{
         }
 
     public:
+        // 자식 클래스 생성자
         SPN(std::queue<Job> jobs, double switch_overhead) : Scheduler(jobs, switch_overhead) {
             name = "SPN";
+            /*
+            * 위 생성자 선언 및 이름 초기화 코드 수정하지 말것.
+            * 나머지는 자유롭게 수정 및 작성 가능 (아래 코드 수정 및 삭제 가능)
+            */
         }
 
+        // 스케줄링 함수
         int run() override {
+            // 할당된 작업이 없고, job_queue가 비어있지 않으면 작업 할당
             if (current_job_.name == 0 && !job_queue_.empty()) {
                 current_job_ = search_shortest_job();
             }
 
+            // 현재 작업이 모두 완료되면
             if (current_job_.remain_time == 0) {
+                // 작업 완료 시간 기록
                 current_job_.completion_time = current_time_;
+                // 작업 완료 벡터에 저장
                 end_jobs_.push_back(current_job_);
 
+                // 남은 작업이 없으면 종료
                 if (job_queue_.empty()) return -1;
 
+                // 새로운 작업 할당
                 current_job_ = search_shortest_job();
-
+                // context switch 타임 추가
                 current_time_ += switch_time_;
             }
 
+            // 현재 작업이 처음 스케줄링 되는 것이라면
             if (current_job_.service_time == current_job_.remain_time) {
+                // 첫 실행 시간 기록
                 current_job_.first_run_time = current_time_;
             }
 
+            // 현재 시간 ++
             current_time_++;
-
+            // 작업의 남은 시간 --
             current_job_.remain_time--;
 
+            // 스케줄링할 작업명 반환
             return current_job_.name;
         }
 };
@@ -88,6 +116,7 @@ class RR : public Scheduler{
         std::queue<Job> waiting_queue;
 
     public:
+        // 자식 클래스 생성자
         RR(std::queue<Job> jobs, double switch_overhead, int time_slice) : Scheduler(jobs, switch_overhead) {
             name = "RR_"+std::to_string(time_slice);
             /*
@@ -98,11 +127,14 @@ class RR : public Scheduler{
             left_slice_ = time_slice;
         }
 
+        // 스케줄링 함수
         int run() override {
+            // 할당된 작업이 없고, job_queue가 비어있지 않으면 작업 할당
             if (current_job_.name == 0 && !job_queue_.empty()) {
                 current_job_ = job_queue_.front();
                 job_queue_.pop();
             }else {
+                // 현재 작업이 모두 완료되면
                 if (current_job_.remain_time == 0) {
                     current_job_.completion_time = current_time_;
                     end_jobs_.push_back(current_job_);
@@ -211,6 +243,7 @@ class SRT : public Scheduler{
                 current_job_ = job_queue_.front();
                 job_queue_.pop();
             }else {
+                // 현재 작업이 모두 완료되면
                 if (current_job_.remain_time == 0) {
                     current_job_.completion_time = current_time_;
                     end_jobs_.push_back(current_job_);
@@ -234,7 +267,9 @@ class SRT : public Scheduler{
                 }
             }
 
-            if (current_job_.service_time == current_job_.remain_time) {
+            // 현재 작업이 처음 스케줄링 되는 것이라면
+            if (current_job_.service_time == current_job_.remain_time){
+                // 첫 실행 시간 기록
                 current_job_.first_run_time = current_time_;
             }
 
@@ -291,6 +326,7 @@ class HRRN : public Scheduler{
                 current_job_ = search_high_response_ratio_job();
             }
 
+            // 현재 작업이 모두 완료되면
             if (current_job_.remain_time == 0) {
                 current_job_.completion_time = current_time_;
                 end_jobs_.push_back(current_job_);
@@ -302,7 +338,9 @@ class HRRN : public Scheduler{
                 current_time_ += switch_time_;
             }
 
-            if (current_job_.service_time == current_job_.remain_time) {
+            // 현재 작업이 처음 스케줄링 되는 것이라면
+            if (current_job_.service_time == current_job_.remain_time){
+                // 첫 실행 시간 기록
                 current_job_.first_run_time = current_time_;
             }
 
@@ -390,6 +428,7 @@ class FeedBack : public Scheduler{
                 current_job_ = job_queue_.front();
                 job_queue_.pop();
             }else {
+                // 현재 작업이 모두 완료되면
                 if (current_job_.remain_time == 0) {
                     current_job_.completion_time = current_time_;
                     end_jobs_.push_back(current_job_);
@@ -459,7 +498,9 @@ class FeedBack : public Scheduler{
                 }
             }
 
-            if (current_job_.service_time == current_job_.remain_time) {
+            // 현재 작업이 처음 스케줄링 되는 것이라면
+            if (current_job_.service_time == current_job_.remain_time){
+                // 첫 실행 시간 기록
                 current_job_.first_run_time = current_time_;
             }
 
@@ -475,14 +516,6 @@ class FeedBack : public Scheduler{
                 ready_queue[0].push(add_job);
                 job_queue_.pop();
             }
-
-            // using namespace std::this_thread;
-            // using namespace std::chrono;
-
-            // std::cout << current_job_.name << "\n";
-            // std::cout << "current queue: " << this->current_queue << "\n";
-
-            // sleep_for(seconds(1));
 
             return current_job_.name;
         }
