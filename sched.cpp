@@ -317,9 +317,57 @@ class HRRN : public Scheduler{
 // FeedBack 스케줄러 (queue 개수 : 4 / boosting 없음)
 class FeedBack : public Scheduler{
     private:
-        /*
-        * 구현 (멤버 변수/함수 추가 및 삭제 가능)
-        */    
+        std::vector<std::queue<Job>> ready_queue;
+        std::vector<int> quantum;
+
+        int left_slice_;
+        int current_queue = 0;
+
+        bool is_ready_queue_empty() {
+            bool flag = true;
+            int index = 0;
+            while (index < 4) {
+                if (!ready_queue[index].empty()) {
+                    flag = false;
+                    break;
+                }
+
+                index++;
+            }
+
+            return flag;
+        }
+
+        // void search_next_job() {
+        //     int prev_job_queue = this->current_queue;
+        //     Job next_job_;
+        //     this->current_queue = 0;
+
+        //     while(this->current_queue < 4) {
+        //         if (ready_queue[this->current_queue].empty()) {
+        //             this->current_queue++;
+        //         }else {
+        //             next_job_ = ready_queue[this->current_queue].front();
+        //             ready_queue[this->current_queue].pop();
+        //             break;
+        //         }
+        //     }
+
+        //     if (this->current_queue == 4) {
+        //         this->current_queue = 0;
+        //     }else {
+        //         if (prev_job_queue == 3) {
+        //             ready_queue[prev_job_queue].push(current_job_);
+        //         }else {
+        //             ready_queue[prev_job_queue + 1].push(current_job_);
+        //         }
+                
+        //         current_job_ = next_job_;
+        //     }
+
+        //     this->left_slice_ = quantum[this->current_queue];
+        // }
+
     public:
         FeedBack(std::queue<Job> jobs, double switch_overhead, bool is_2i) : Scheduler(jobs, switch_overhead) {
             if(is_2i){
@@ -328,16 +376,114 @@ class FeedBack : public Scheduler{
                 name = "FeedBack_1";
             }
 
-            /*
-            * 위 생성자 선언 및 이름 초기화 코드 수정하지 말것.
-            * 나머지는 자유롭게 수정 및 작성 가능
-            */
+            if (is_2i) {
+                quantum = {1, 2, 4, 8};
+            }else {
+                quantum = {1, 1, 1, 1};
+            }
+            this->ready_queue.resize(4);
+            this->left_slice_ = quantum[current_queue];
         }
 
         int run() override {
-            /*
-            * 구현 
-            */
-            return -1;
+            if (current_job_.name == 0 && !job_queue_.empty()) {
+                current_job_ = job_queue_.front();
+                job_queue_.pop();
+            }else {
+                if (current_job_.remain_time == 0) {
+                    current_job_.completion_time = current_time_;
+                    end_jobs_.push_back(current_job_);
+
+                    if (job_queue_.empty() && is_ready_queue_empty()) return -1;
+
+                    this->current_queue = 0;
+                    while(this->current_queue < 4) {
+                        if (ready_queue[this->current_queue].empty()) {
+                            this->current_queue++;
+                        }else {
+                            current_job_ = ready_queue[this->current_queue].front();
+                            ready_queue[this->current_queue].pop();
+                            break;
+                        }
+                    }
+
+                    current_time_ += switch_time_;
+                    this->left_slice_ = quantum[this->current_queue];
+                }else if (this->left_slice_ == 0) {
+                    int prev_job_name = current_job_.name;
+
+                    if (this->current_queue == 3) {
+                        ready_queue[this->current_queue].push(current_job_);
+
+                        this->current_queue = 0;
+                        while(this->current_queue < 4) {
+                            if (ready_queue[this->current_queue].empty()) {
+                                this->current_queue++;
+                            }else {
+                                current_job_ = ready_queue[this->current_queue].front();
+                                ready_queue[this->current_queue].pop();
+                                break;
+                            }
+                        }
+                    }else {
+                        int prev_job_queue = this->current_queue;
+                        Job next_job_;
+                        this->current_queue = 0;
+
+                        if (prev_job_queue == 3 || is_ready_queue_empty()) {
+                            ready_queue[prev_job_queue].push(current_job_);
+                        }else {
+                            ready_queue[prev_job_queue + 1].push(current_job_);
+                        }
+
+                        while(this->current_queue < 4) {
+                            if (ready_queue[this->current_queue].empty()) {
+                                this->current_queue++;
+                            }else {
+                                next_job_ = ready_queue[this->current_queue].front();
+                                ready_queue[this->current_queue].pop();
+                                break;
+                            }
+                        }
+
+                        if (this->current_queue == 4) {
+                            this->current_queue = 0;
+                        }else {
+                            current_job_ = next_job_;
+                        }
+                    }
+
+                    if (prev_job_name != current_job_.name) current_time_ += switch_time_;
+
+                    this->left_slice_ = quantum[this->current_queue];
+                }
+            }
+
+            if (current_job_.service_time == current_job_.remain_time) {
+                current_job_.first_run_time = current_time_;
+            }
+
+            // 현재 시간 ++
+            current_time_++;
+            // 작업의 남은 시간 --
+            current_job_.remain_time--;
+
+            this->left_slice_--;
+
+            while (!job_queue_.empty() && job_queue_.front().arrival_time <= current_time_) {
+                Job add_job = job_queue_.front();
+                ready_queue[0].push(add_job);
+                job_queue_.pop();
+            }
+
+            // using namespace std::this_thread;
+            // using namespace std::chrono;
+
+            // std::cout << current_job_.name << "\n";
+            // std::cout << "current queue: " << this->current_queue << "\n";
+
+            // sleep_for(seconds(1));
+
+            return current_job_.name;
         }
 };
